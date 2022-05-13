@@ -3,7 +3,22 @@
 
 format: jb-book
 root: intro
-chapters:
-- file: markdown
-- file: notebooks
-- file: markdown-notebooks
+parts:
+- caption: Introduction
+  chapters:
+  - file: _intro/speaker_variability
+  - file: _intro/self_supervised_models
+- caption: Methods and Materials
+  chapters:
+  - file: _methods/dimensionality_reduction
+  - file: _methods/high_dimension_analysis
+  - file: _methods/datasets_experiments
+  - file: _methods/voice_synthesis
+  - file: _methods/nonlinear_mapping
+  - file: _methods/representation_similarity_methods
+- caption: Experiments
+  chapters:
+  - file: _experiments/pipeline
+  - file: _experiments/datasets_experiments
+    sections:
+      - file: _experiments/_datasets_experiments/scriptvsspon_analysis
