@@ -1,6 +1,42 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# In[1]:
+
+
+#Importing packages
+import os
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from functools import reduce
+from glob import glob
+from tqdm import tqdm
+import soundfile as sf
+import librosa
+from collections import Counter
+import torch
+import scipy
+from scipy.spatial.distance import pdist
+from scipy.spatial.distance import squareform
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.manifold import TSNE
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import RepeatedStratifiedKFold, GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+import warnings
+warnings.filterwarnings('ignore')
+import serab_byols
+from common import *
+from utils import *
+
+
 # # Scripted vs Spontaneous Speech
 
 # In this section, we explore the differences between scripted speech and casual/spontaneous speech. Both speaking styles feature minimal vocal variations yet impactful. It has been observed that speaking style could affect voice perception in humans in case of unfamiliar voices ([Smith et al. (2019)](https://onlinelibrary.wiley.com/doi/epdf/10.1002/acp.3478?saml_referrer), [Stevenage et al. (2021)](https://link.springer.com/content/pdf/10.1007/s10919-020-00348-w.pdf) and [Afshan et al. (2022)](https://asa.scitation.org/doi/pdf/10.1121/10.0009585?casa_token=rSyTJ-uiRW8AAAAA:GlyYCKNccGdLEfnk5oynoj-IgLnAlSBPuHTndx8uzg0VsupZ3bOFqfGJROBRhBxdcgs6ozZR0DvL)). Accordingly, we are going to investigate the effect of speaking style on generating speech embeddings that should maintain close distances with samples from the same speaker.
@@ -28,11 +64,23 @@
 # 
 # Finally, the naming convention for the audio files is: *{ID}_{Gender}_{Task}_{Label}_{File Number}.wav* (e.g. 049_F_DHR_script_000.wav).
 
+# In[38]:
+
+
+import plotly.io as pio
+import plotly.express as px
+import plotly.offline as py
+
+df = px.data.iris()
+fig = px.scatter(df, x="sepal_width", y="sepal_length", color="species", size="sepal_length")
+fig
+
+
 # In the following analysis, we will be using the 3sec-utterance version of the dataset.
 
 # ## 1) Loading Data
 
-# In[1]:
+# In[3]:
 
 
 #read wav files' paths
@@ -41,7 +89,7 @@ wav_files = sorted(glob('datasets/scripted_spont_dataset/preprocessed_audios_dur
 print(f'{len(wav_files)} samples')
 
 
-# In[10]:
+# In[4]:
 
 
 #balancing the number of audio files in each label (i.e. to have equal number of scripted vs spontaneous samples per subject)
@@ -57,7 +105,7 @@ for wav_dir in wav_dirs:
 wav_files = files
 
 
-# In[11]:
+# In[5]:
 
 
 #extract metadata from path (Script VS Spon data)
@@ -67,7 +115,7 @@ speaker_ids = np.array(list(map(lambda x: os.path.basename(x).split('_')[0], wav
 labels = np.array(list(map(lambda x: os.path.basename(x).split('_')[3], wav_files)))
 
 
-# In[12]:
+# In[6]:
 
 
 #load audio files as torch tensors to get ready for feature extraction
@@ -79,7 +127,7 @@ len(audio_tensor_list)
 
 # In order to generate speech embeddings using BYOL-S model, we installed our [package](https://github.com/GasserElbanna/serab-byols) to extract the needed features and use the model checkpoints.
 
-# In[13]:
+# In[8]:
 
 
 #generate speech embeddings
@@ -94,7 +142,7 @@ byols_embeddings.shape
 
 # ### 3.1 Prepare data for computing cosine distances in the original dimensions
 
-# In[234]:
+# In[10]:
 
 
 #create dataframe with all dataset metadata
@@ -103,7 +151,7 @@ df = pd.DataFrame(data=data)
 df.head()
 
 
-# In[235]:
+# In[11]:
 
 
 #add embeddings to original dataframe
@@ -113,7 +161,7 @@ df = pd.concat([df, df_embeddings], axis=1)
 df.head()
 
 
-# In[9]:
+# In[12]:
 
 
 #create distance-based dataframe between all data samples in a square form
@@ -330,10 +378,10 @@ spon_df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'U
 metrics = pd.read_csv('scriptvsspon_metrics.csv')
 
 
-# In[11]:
+# In[7]:
 
 
-fig, ax = plt.subplots(2, 4, figsize=(40, 20))
+fig, ax = plt.subplots(2, 4, figsize=(40, 30))
 optimize = 'Global'
 labels = ['script', 'spon']
 metrics = pd.read_csv('scriptvsspon_metrics.csv')
@@ -346,11 +394,11 @@ for i, label in enumerate(labels):
         metric = [metrics['Local'].iloc[max_idx], metrics['Global'].iloc[max_idx]]
         visualize_embeddings(df, 'gender', metrics=metric, axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='sns')
     ax[i, 0].set_ylabel(label, fontsize=15)
-ax[i,j].legend(bbox_to_anchor=(1.2, 1.15), fontsize=12)
+ax[i,j].legend(bbox_to_anchor=(1.2, 1.15), fontsize=20)
 plt.tight_layout()
 
 
-# In[29]:
+# In[10]:
 
 
 import plotly
@@ -371,17 +419,15 @@ for i, label in enumerate(labels):
         visualize_embeddings(df, 'gender', metrics=metric, axis=fig, opt_structure=optimize, red_name=name, plot_type='plotly', row=i+1, col=j+1, hovertext=df['wav_file'], label=label)
 fig.update_layout(
     autosize=False,
-    width=1800,
+    width=1600,
     height=1200, showlegend=False,)
-# fig.show()
-plotly.offline.plot(fig, filename = 'figure_1.html')
-IFrame('figure_1.html', width=1800, height=1200)
+fig.show()
 
 
-# In[13]:
+# In[12]:
 
 
-fig, ax = plt.subplots(2, 4, figsize=(40, 20))
+fig, ax = plt.subplots(2, 4, figsize=(40, 30))
 optimize = 'Global'
 labels = ['script', 'spon']
 metrics = pd.read_csv('scriptvsspon_metrics.csv')
@@ -394,11 +440,11 @@ for i, label in enumerate(labels):
         metric = [metrics['Local'].iloc[max_idx], metrics['Global'].iloc[max_idx]]
         visualize_embeddings(df, 'id', metrics=metric, axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='sns')
     ax[i, 0].set_ylabel(label, fontsize=15)
-ax[i,j].legend(bbox_to_anchor=(1.2, 1.5), fontsize=12)
+ax[i,j].legend(bbox_to_anchor=(1, 1), fontsize=20)
 plt.tight_layout()
 
 
-# In[19]:
+# In[13]:
 
 
 fig = make_subplots(rows=2, cols=4)
@@ -415,7 +461,7 @@ for i, label in enumerate(labels):
         visualize_embeddings(df, 'id', metrics=metric, axis=fig, opt_structure=optimize, red_name=name, plot_type='plotly', row=i+1, col=j+1, hovertext=df['wav_file'], label=label)
 fig.update_layout(
     autosize=False,
-    width=1800,
+    width=1600,
     height=1200, showlegend=False,)
 fig.show()
 
@@ -660,43 +706,21 @@ genderless_embeddings = np.delete(byols_embeddings, indices, axis=1)
 
 # ### Gender-related features Analysis
 
-# In[29]:
+# In[15]:
 
 
-def visualize_embeddings(df, label_name, metrics=[], axis=[], acoustic_param={}, opt_structure='Local', plot_type='sns', red_name='PCA', row=1, col=1, hovertext='', label='spon'):
-    if plot_type == 'sns':
-        sns.scatterplot(data=df, x=(red_name, opt_structure, 'Dim1'), y=(red_name, opt_structure, 'Dim2'), hue=label_name
-                        , style=label_name, palette='deep', ax=axis)
-        axis.set(xlabel=None, ylabel=None)
-        axis.get_legend().remove()
-        if len(metrics) != 0:
-            axis.set_title(f'{red_name}: KNN={metrics[0]:0.2f}, CPD={metrics[1]:0.2f}', fontsize=15)
-        else:
-            axis.set_title(f'{red_name}', fontsize=15)
-    else:
-        traces = px.scatter(x=df[red_name, opt_structure, 'Dim1'], y=df[red_name, opt_structure, 'Dim2'], color=df[label_name].astype(str), hover_name=hovertext, title=f'{red_name}: KNN={metrics[0]:0.2f}, CPD={metrics[1]:0.2f}')
-        traces.layout.update(showlegend=False)
-        axis.add_traces(
-            list(traces.select_traces()),
-            rows=row, cols=col
-        )
-
-
-# In[31]:
-
-
-fig, ax = plt.subplots(1, 4, figsize=(40, 10))
+fig, ax = plt.subplots(1, 4, figsize=(40, 15))
 optimize = 'Global'
 reducer_names, params_list = get_reducers_params()
 df = pd.read_csv(f'gender_features_scriptvsspon_dataset_217.csv', header=[0,1,2])
 df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': ''},inplace=True)
 for j, name in enumerate(reducer_names):
     visualize_embeddings(df, 'gender', axis=ax[j], opt_structure=optimize, red_name=name, plot_type='sns')
-ax[j].legend(bbox_to_anchor=(1, 1), fontsize=12)
+ax[j].legend(bbox_to_anchor=(1, 1), fontsize=20)
 plt.tight_layout()
 
 
-# In[61]:
+# In[37]:
 
 
 fig = make_subplots(rows=1, cols=4)
@@ -708,15 +732,15 @@ for j, name in enumerate(reducer_names):
     visualize_embeddings(df, 'gender', axis=fig, opt_structure=optimize, red_name=name, plot_type='plotly', row=1, col=j+1, hovertext=df['wav_file'])
 fig.update_layout(
     autosize=False,
-    width=1800,
+    width=1600,
     height=600, showlegend=False,)
 fig.show()
 
 
-# In[32]:
+# In[23]:
 
 
-fig, ax = plt.subplots(1, 4, figsize=(40, 10))
+fig, ax = plt.subplots(1, 4, figsize=(40, 15))
 optimize = 'Global'
 reducer_names, params_list = get_reducers_params()
 df = pd.read_csv(f'gender_features_scriptvsspon_dataset_217.csv', header=[0,1,2])
@@ -727,7 +751,7 @@ ax[j].legend(bbox_to_anchor=(1, 1), fontsize=12)
 plt.tight_layout()
 
 
-# In[63]:
+# In[24]:
 
 
 fig = make_subplots(rows=1, cols=4)
@@ -741,7 +765,7 @@ for j, name in enumerate(reducer_names):
     visualize_embeddings(df, 'id', axis=fig, opt_structure=optimize, red_name=name, plot_type='plotly', row=1, col=j+1, hovertext=df['wav_file'])
 fig.update_layout(
     autosize=False,
-    width=1800,
+    width=1600,
     height=600, showlegend=False,)
 fig.show()
 
@@ -770,21 +794,21 @@ def visualize_embeddings(df, label_name, metrics=[], axis=[], acoustic_param={},
         )
 
 
-# In[37]:
+# In[25]:
 
 
-fig, ax = plt.subplots(1, 4, figsize=(40, 10))
+fig, ax = plt.subplots(1, 4, figsize=(40, 15))
 optimize = 'Global'
 reducer_names, params_list = get_reducers_params()
 df = pd.read_csv(f'genderless_features_scriptvsspon_dataset_217.csv', header=[0,1,2])
 df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': ''},inplace=True)
 for j, name in enumerate(reducer_names):
     visualize_embeddings(df, 'gender', axis=ax[j], opt_structure=optimize, red_name=name, plot_type='sns')
-ax[j].legend(bbox_to_anchor=(1, 1), fontsize=12)
+ax[j].legend(bbox_to_anchor=(1, 1), fontsize=20)
 plt.tight_layout()
 
 
-# In[62]:
+# In[26]:
 
 
 fig = make_subplots(rows=1, cols=4)
@@ -796,26 +820,26 @@ for j, name in enumerate(reducer_names):
     visualize_embeddings(df, 'gender', axis=fig, opt_structure=optimize, red_name=name, plot_type='plotly', row=1, col=j+1, hovertext=df['wav_file'])
 fig.update_layout(
     autosize=False,
-    width=1800,
+    width=1600,
     height=600, showlegend=False,)
 fig.show()
 
 
-# In[38]:
+# In[27]:
 
 
-fig, ax = plt.subplots(1, 4, figsize=(40, 10))
+fig, ax = plt.subplots(1, 4, figsize=(40, 15))
 optimize = 'Global'
 reducer_names, params_list = get_reducers_params()
 df = pd.read_csv(f'genderless_features_scriptvsspon_dataset_217.csv', header=[0,1,2])
 df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': ''},inplace=True)
 for j, name in enumerate(reducer_names):
     visualize_embeddings(df, 'id', axis=ax[j], opt_structure=optimize, red_name=name, plot_type='sns')
-ax[j].legend(bbox_to_anchor=(1, 1), fontsize=12)
+ax[j].legend(bbox_to_anchor=(1, 1), fontsize=20)
 plt.tight_layout()
 
 
-# In[64]:
+# In[28]:
 
 
 fig = make_subplots(rows=1, cols=4)
@@ -829,7 +853,7 @@ for j, name in enumerate(reducer_names):
     visualize_embeddings(df, 'id', axis=fig, opt_structure=optimize, red_name=name, plot_type='plotly', row=1, col=j+1, hovertext=df['wav_file'])
 fig.update_layout(
     autosize=False,
-    width=1800,
+    width=1600,
     height=600, showlegend=False,)
 fig.show()
 
