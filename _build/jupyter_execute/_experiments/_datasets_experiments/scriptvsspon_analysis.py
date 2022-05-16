@@ -1,45 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
-
-
-#Importing packages
-import os
-import numpy as np
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import plotly.express as px
-import plotly.offline as py
-from plotly.subplots import make_subplots
-from functools import reduce
-from glob import glob
-from tqdm import tqdm
-import soundfile as sf
-import librosa
-from collections import Counter
-import torch
-import scipy
-from scipy.spatial.distance import pdist
-from scipy.spatial.distance import squareform
-from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression, Ridge
-from sklearn.manifold import TSNE
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from sklearn.pipeline import Pipeline
-from sklearn.model_selection import RepeatedStratifiedKFold, GridSearchCV
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-import warnings
-warnings.filterwarnings('ignore')
-import serab_byols
-from common import *
-from utils import *
-
-
 # # Scripted vs Spontaneous Speech
 
 # In this section, we explore the differences between scripted speech and casual/spontaneous speech. Both speaking styles feature minimal vocal variations yet impactful. It has been observed that speaking style could affect voice perception in humans in case of unfamiliar voices ([Smith et al. (2019)](https://onlinelibrary.wiley.com/doi/epdf/10.1002/acp.3478?saml_referrer), [Stevenage et al. (2021)](https://link.springer.com/content/pdf/10.1007/s10919-020-00348-w.pdf) and [Afshan et al. (2022)](https://asa.scitation.org/doi/pdf/10.1121/10.0009585?casa_token=rSyTJ-uiRW8AAAAA:GlyYCKNccGdLEfnk5oynoj-IgLnAlSBPuHTndx8uzg0VsupZ3bOFqfGJROBRhBxdcgs6ozZR0DvL)). Accordingly, we are going to investigate the effect of speaking style on generating speech embeddings that should maintain close distances with samples from the same speaker.
@@ -71,7 +32,7 @@ from utils import *
 
 # ## 1) Loading Data
 
-# In[3]:
+# In[1]:
 
 
 #read wav files' paths
@@ -80,7 +41,7 @@ wav_files = sorted(glob('datasets/scripted_spont_dataset/preprocessed_audios_dur
 print(f'{len(wav_files)} samples')
 
 
-# In[4]:
+# In[140]:
 
 
 #balancing the number of audio files in each label (i.e. to have equal number of scripted vs spontaneous samples per subject)
@@ -96,7 +57,7 @@ for wav_dir in wav_dirs:
 wav_files = files
 
 
-# In[5]:
+# In[173]:
 
 
 #extract metadata from path (Script VS Spon data)
@@ -106,7 +67,7 @@ speaker_ids = np.array(list(map(lambda x: os.path.basename(x).split('_')[0], wav
 labels = np.array(list(map(lambda x: os.path.basename(x).split('_')[3], wav_files)))
 
 
-# In[6]:
+# In[7]:
 
 
 #load audio files as torch tensors to get ready for feature extraction
@@ -820,5 +781,257 @@ fig.update_layout(
     autosize=False,
     width=1600,
     height=600, showlegend=False,)
+fig.show()
+
+
+# ## 7) Acoustic Features Analysis
+
+# In this section, we will compute some acoustic features (F0 and loudness) from the audio files and see their distribution in the 2D dimensionality reduction plots.
+
+# In[195]:
+
+
+import pyloudnorm as pyln
+f0s = []; loudness = []; mffcc_1 = []; rms=[]
+for file in tqdm(wav_files):
+    audio, orig_sr = sf.read(file)
+    
+#     #measure the median fundamental frequency
+#     f0 = librosa.yin(audio, fmin=librosa.note_to_hz('C1'),
+#                             fmax=librosa.note_to_hz('C7'), sr=orig_sr)
+#     f0s.append(np.nanmedian(f0))
+    
+#     #measure the loudness 
+#     meter = pyln.Meter(orig_sr) # create BS.1770 meter
+#     l = meter.integrated_loudness(audio)
+#     loudness.append(l)
+    
+#     #measure the first mfcc
+#     mfccs = librosa.feature.mfcc(audio, sr=orig_sr)
+#     mffcc_1.append(np.nanmedian(mfccs[0,:]))
+    
+    #measure rms
+    rms.append(np.nanmedian(librosa.feature.rms(audio)))
+
+
+# In[196]:
+
+
+with open("rms.pickle", "wb") as output_file:
+    pickle.dump(rms, output_file)
+
+
+# In[197]:
+
+
+with open("f0s.pickle", "rb") as output_file:
+    f0s = np.array(pickle.load(output_file))
+with open("loudness.pickle", "rb") as output_file:
+    loudness = np.array(pickle.load(output_file))
+with open("mfcc_1.pickle", "rb") as output_file:
+    mfcc_1 = np.array(pickle.load(output_file))
+with open("rms.pickle", "rb") as output_file:
+    rms = np.array(pickle.load(output_file))
+
+
+# Plotting the Median F0 of audio samples across 4 dimensionality reduction methods
+
+# In[179]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(30, 15))
+optimize = 'Global'
+unique_labels = ['script', 'spon']
+metrics = pd.read_csv('scriptvsspon_metrics.csv')
+reducer_names, params_list = get_reducers_params()
+for i, label in enumerate(unique_labels):
+    indices = list(np.where(labels == label)[0])
+    df = pd.read_csv(f'{label}_dataset.csv', header=[0,1,2])
+    df['f0'] = f0s[indices]; df['loudness'] = loudness[indices]
+    df['f0'] = df['f0'].mask(df['f0'] > 300, 300)
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': ''},inplace=True)
+    for j, name in enumerate(reducer_names):
+        max_idx = metrics[optimize].loc[(metrics.Protocol==label)&(metrics.Method==name)].idxmax()
+        metric = [metrics['Local'].iloc[max_idx], metrics['Global'].iloc[max_idx]]
+        points = visualize_embeddings(df, 'f0', metrics=metric, axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='colorbar')
+    ax[i, 0].set_ylabel(label, fontsize=15)
+cbar = fig.colorbar(points, ax=ax.ravel().tolist())
+cbar.ax.set_ylabel('Median F0', rotation=270)
+plt.show()
+
+
+# In[178]:
+
+
+fig = make_subplots(rows=2, cols=4)
+optimize = 'Global'
+unique_labels = ['script', 'spon']
+metrics = pd.read_csv('scriptvsspon_metrics.csv')
+reducer_names, params_list = get_reducers_params()
+for i, label in enumerate(unique_labels):
+    df = pd.read_csv(f'{label}_dataset.csv', header=[0,1,2])
+    indices = list(np.where(labels == label)[0])
+    df['f0'] = f0s[indices]; df['loudness'] = loudness[indices]
+    df['f0'] = df['f0'].mask(df['f0'] > 300, 300)
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': ''},inplace=True)
+    for j, name in enumerate(reducer_names):
+        max_idx = metrics[optimize].loc[(metrics.Protocol==label)&(metrics.Method==name)].idxmax()
+        metric = [metrics['Local'].iloc[max_idx], metrics['Global'].iloc[max_idx]]
+        visualize_embeddings(df, 'f0', metrics=metric, axis=fig, opt_structure=optimize, red_name=name, plot_type='plotly', row=i+1, col=j+1, hovertext=df['wav_file'], label=label)
+fig.update_layout(
+    autosize=False,
+    width=1600,
+    height=1200, showlegend=False,)
+fig.show()
+
+
+# Plotting the Loudness of audio samples across 4 dimensionality reduction methods
+
+# In[180]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(30, 15))
+optimize = 'Global'
+unique_labels = ['script', 'spon']
+metrics = pd.read_csv('scriptvsspon_metrics.csv')
+reducer_names, params_list = get_reducers_params()
+for i, label in enumerate(unique_labels):
+    indices = list(np.where(labels == label)[0])
+    df = pd.read_csv(f'{label}_dataset.csv', header=[0,1,2])
+    df['f0'] = f0s[indices]; df['loudness'] = loudness[indices]
+    df['f0'] = df['f0'].mask(df['f0'] > 300, 300)
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': ''},inplace=True)
+    for j, name in enumerate(reducer_names):
+        max_idx = metrics[optimize].loc[(metrics.Protocol==label)&(metrics.Method==name)].idxmax()
+        metric = [metrics['Local'].iloc[max_idx], metrics['Global'].iloc[max_idx]]
+        points = visualize_embeddings(df, 'loudness', metrics=metric, axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='colorbar')
+    ax[i, 0].set_ylabel(label, fontsize=15)
+cbar = fig.colorbar(points, ax=ax.ravel().tolist())
+cbar.ax.set_ylabel('Loudness', rotation=270)
+plt.show()
+
+
+# In[181]:
+
+
+fig = make_subplots(rows=2, cols=4)
+optimize = 'Global'
+unique_labels = ['script', 'spon']
+metrics = pd.read_csv('scriptvsspon_metrics.csv')
+reducer_names, params_list = get_reducers_params()
+for i, label in enumerate(unique_labels):
+    df = pd.read_csv(f'{label}_dataset.csv', header=[0,1,2])
+    indices = list(np.where(labels == label)[0])
+    df['f0'] = f0s[indices]; df['loudness'] = loudness[indices]
+    df['f0'] = df['f0'].mask(df['f0'] > 300, 300)
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': ''},inplace=True)
+    for j, name in enumerate(reducer_names):
+        max_idx = metrics[optimize].loc[(metrics.Protocol==label)&(metrics.Method==name)].idxmax()
+        metric = [metrics['Local'].iloc[max_idx], metrics['Global'].iloc[max_idx]]
+        visualize_embeddings(df, 'loudness', metrics=metric, axis=fig, opt_structure=optimize, red_name=name, plot_type='plotly', row=i+1, col=j+1, hovertext=df['wav_file'], label=label)
+fig.update_layout(
+    autosize=False,
+    width=1600,
+    height=1200, showlegend=False,)
+fig.show()
+
+
+# Plotting the median of first MFCC of audio samples across 4 dimensionality reduction methods
+
+# In[191]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(30, 15))
+optimize = 'Global'
+unique_labels = ['script', 'spon']
+metrics = pd.read_csv('scriptvsspon_metrics.csv')
+reducer_names, params_list = get_reducers_params()
+for i, label in enumerate(unique_labels):
+    indices = list(np.where(labels == label)[0])
+    df = pd.read_csv(f'{label}_dataset.csv', header=[0,1,2])
+    df['f0'] = f0s[indices]; df['loudness'] = loudness[indices]; df['mfcc_1'] = mfcc_1[indices]
+    df['f0'] = df['f0'].mask(df['f0'] > 300, 300)
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': ''},inplace=True)
+    for j, name in enumerate(reducer_names):
+        max_idx = metrics[optimize].loc[(metrics.Protocol==label)&(metrics.Method==name)].idxmax()
+        metric = [metrics['Local'].iloc[max_idx], metrics['Global'].iloc[max_idx]]
+        points = visualize_embeddings(df, 'mfcc_1', metrics=metric, axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='colorbar')
+    ax[i, 0].set_ylabel(label, fontsize=15)
+cbar = fig.colorbar(points, ax=ax.ravel().tolist())
+cbar.ax.set_ylabel('Median MFCC 1', rotation=270)
+plt.show()
+
+
+# In[205]:
+
+
+fig = make_subplots(rows=2, cols=4)
+optimize = 'Global'
+unique_labels = ['script', 'spon']
+metrics = pd.read_csv('scriptvsspon_metrics.csv')
+reducer_names, params_list = get_reducers_params()
+for i, label in enumerate(unique_labels):
+    df = pd.read_csv(f'{label}_dataset.csv', header=[0,1,2])
+    indices = list(np.where(labels == label)[0])
+    df['f0'] = f0s[indices]; df['loudness'] = loudness[indices]; df['mfcc_1'] = mfcc_1[indices]; df['rms'] = rms[indices]
+    df['f0'] = df['f0'].mask(df['f0'] > 300, 300)
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': ''},inplace=True)
+    for j, name in enumerate(reducer_names):
+        max_idx = metrics[optimize].loc[(metrics.Protocol==label)&(metrics.Method==name)].idxmax()
+        metric = [metrics['Local'].iloc[max_idx], metrics['Global'].iloc[max_idx]]
+        visualize_embeddings(df, 'mfcc_1', metrics=metric, axis=fig, opt_structure=optimize, red_name=name, plot_type='plotly', row=i+1, col=j+1, hovertext=df['wav_file'], label=label)
+fig.update_layout(
+    autosize=False,
+    width=1600,
+    height=1200, showlegend=False,)
+fig.show()
+
+
+# Plotting the median of RMS of audio samples across 4 dimensionality reduction methods
+
+# In[199]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(30, 15))
+optimize = 'Global'
+unique_labels = ['script', 'spon']
+metrics = pd.read_csv('scriptvsspon_metrics.csv')
+reducer_names, params_list = get_reducers_params()
+for i, label in enumerate(unique_labels):
+    indices = list(np.where(labels == label)[0])
+    df = pd.read_csv(f'{label}_dataset.csv', header=[0,1,2])
+    df['rms'] = rms[indices]
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': ''},inplace=True)
+    for j, name in enumerate(reducer_names):
+        max_idx = metrics[optimize].loc[(metrics.Protocol==label)&(metrics.Method==name)].idxmax()
+        metric = [metrics['Local'].iloc[max_idx], metrics['Global'].iloc[max_idx]]
+        points = visualize_embeddings(df, 'rms', metrics=metric, axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='colorbar')
+    ax[i, 0].set_ylabel(label, fontsize=15)
+cbar = fig.colorbar(points, ax=ax.ravel().tolist())
+cbar.ax.set_ylabel('Median RMS', rotation=270)
+plt.show()
+
+
+# In[200]:
+
+
+fig = make_subplots(rows=2, cols=4)
+optimize = 'Global'
+unique_labels = ['script', 'spon']
+metrics = pd.read_csv('scriptvsspon_metrics.csv')
+reducer_names, params_list = get_reducers_params()
+for i, label in enumerate(unique_labels):
+    df = pd.read_csv(f'{label}_dataset.csv', header=[0,1,2])
+    indices = list(np.where(labels == label)[0])
+    df['rms'] = rms[indices]
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': ''},inplace=True)
+    for j, name in enumerate(reducer_names):
+        max_idx = metrics[optimize].loc[(metrics.Protocol==label)&(metrics.Method==name)].idxmax()
+        metric = [metrics['Local'].iloc[max_idx], metrics['Global'].iloc[max_idx]]
+        visualize_embeddings(df, 'rms', metrics=metric, axis=fig, opt_structure=optimize, red_name=name, plot_type='plotly', row=i+1, col=j+1, hovertext=df['wav_file'], label=label)
+fig.update_layout(
+    autosize=False,
+    width=1600,
+    height=1200, showlegend=False,)
 fig.show()
 
