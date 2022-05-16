@@ -10,6 +10,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import plotly.express as px
+import plotly.offline as py
+from plotly.subplots import make_subplots
 from functools import reduce
 from glob import glob
 from tqdm import tqdm
@@ -63,18 +66,6 @@ from utils import *
 # The dataset was processed by undersampling to 16 kHz to be compatible with BYOL-S model. Additionally, the utterances were cropped to fixed durations (1, 3, 5, 10, 15 sec) to yield 5 new datasets generated from the original one.
 # 
 # Finally, the naming convention for the audio files is: *{ID}_{Gender}_{Task}_{Label}_{File Number}.wav* (e.g. 049_F_DHR_script_000.wav).
-
-# In[38]:
-
-
-import plotly.io as pio
-import plotly.express as px
-import plotly.offline as py
-
-df = px.data.iris()
-fig = px.scatter(df, x="sepal_width", y="sepal_length", color="species", size="sepal_length")
-fig
-
 
 # In the following analysis, we will be using the 3sec-utterance version of the dataset.
 
@@ -398,13 +389,9 @@ ax[i,j].legend(bbox_to_anchor=(1.2, 1.15), fontsize=20)
 plt.tight_layout()
 
 
-# In[10]:
+# In[2]:
 
 
-import plotly
-from IPython.display import display
-from IPython.display import IFrame
-# from html import HTML
 fig = make_subplots(rows=2, cols=4)
 optimize = 'Global'
 labels = ['script', 'spon']
@@ -771,28 +758,6 @@ fig.show()
 
 
 # ### *"Genderless"*-related Features Analysis
-
-# In[36]:
-
-
-def visualize_embeddings(df, label_name, metrics=[], axis=[], acoustic_param={}, opt_structure='Local', plot_type='sns', red_name='PCA', row=1, col=1, hovertext='', label='spon'):
-    if plot_type == 'sns':
-        sns.scatterplot(data=df, x=(red_name, opt_structure, 'Dim1'), y=(red_name, opt_structure, 'Dim2'), hue=label_name
-                        , style=label_name, palette='deep', ax=axis)
-        axis.set(xlabel=None, ylabel=None)
-        axis.get_legend().remove()
-        if len(metrics) != 0:
-            axis.set_title(f'{red_name}: KNN={metrics[0]:0.2f}, CPD={metrics[1]:0.2f}', fontsize=15)
-        else:
-            axis.set_title(f'{red_name}', fontsize=15)
-    else:
-        traces = px.scatter(x=df[red_name, opt_structure, 'Dim1'], y=df[red_name, opt_structure, 'Dim2'], color=df[label_name].astype(str), hover_name=hovertext, title=f'{red_name}: KNN={metrics[0]:0.2f}, CPD={metrics[1]:0.2f}')
-        traces.layout.update(showlegend=False)
-        axis.add_traces(
-            list(traces.select_traces()),
-            rows=row, cols=col
-        )
-
 
 # In[25]:
 
