@@ -94,16 +94,45 @@ embeddings_dict = deciphering_enigma.extract_models(audio_tensor_list, exp_confi
 
 # ![distance](distance_orig_dimensions.png)
 
-# In[5]:
+# In[37]:
 
 
 df_all = deciphering_enigma.compute_distances(metadata_df, embeddings_dict, exp_config.dataset_name, 'cosine', list(metadata_df.columns))
 
 
-# In[6]:
+# In[38]:
 
 
-deciphering_enigma.visualize_violin_dist(df_all)
+def visualize_violin_dist(df_all):
+    fig, ax = plt.subplots(1, 1, figsize=(30, 10))
+    violin = sns.violinplot(data=df_all, x='Model', y='Distance', inner='quartile', hue='Label_1', split=True, ax=ax)
+    ax.set(xlabel=None, ylabel=None)
+    ax.set_xticklabels(ax.get_xticklabels(), size = 15)
+    ax.set_yticklabels(ax.get_yticks(), size = 15)
+    ax.set_ylabel('Standardized Cosine Distances', fontsize=20)
+    ax.set_xlabel('Models', fontsize=20)
+
+    # statistical annotation
+    y, h, col = df_all['Distance'].max() + df_all['Distance'].max()*0.05, df_all['Distance'].max()*0.01, 'k'
+    for i, model_name in enumerate(df_all['Model'].unique()):
+        d=cohend(df_all['Distance'].loc[(df_all.Label_1=='spon') & (df_all.Model==model_name)], df_all['Distance'].loc[(df_all.Label_1=='script') & (df_all.Model==model_name)])
+        x1, x2 = -0.25+i, 0.25+i
+        ax.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=1.5, c=col)
+        ax.text((x1+x2)*.5, y+(h*1.5), f'cohen d={d:.2}', ha='center', va='bottom', color=col, fontsize=15)
+    violin.legend(fontsize = 15, \
+                   bbox_to_anchor= (1, 1), \
+                   title="Labels", \
+                   title_fontsize = 18, \
+                   shadow = True, \
+                   facecolor = 'white');
+    plt.tight_layout()
+    plt.savefig('violin_dist.png')
+
+
+# In[39]:
+
+
+visualize_violin_dist(df_all)
 
 
 # ### 3.2. Similarity Representation Analysis:
