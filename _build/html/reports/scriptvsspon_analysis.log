@@ -17,20 +17,42 @@ Traceback (most recent call last):
     raise CellExecutionError.from_cell_and_msg(cell, exec_reply_content)
 nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
 ------------------
-#read wav files' paths
-wav_dirs = sorted(glob('datasets/scripted_spont_dataset/preprocessed_audios_dur3sec/*'))
-wav_files = sorted(glob('datasets/scripted_spont_dataset/preprocessed_audios_dur3sec/*/*.wav'))
-print(f'{len(wav_files)} samples')
+#generate speech embeddings
+embeddings_dict = deciphering_enigma.extract_models(audio_tensor_list, exp_config)
 ------------------
 
 [0;31m---------------------------------------------------------------------------[0m
-[0;31mNameError[0m                                 Traceback (most recent call last)
-Input [0;32mIn [1][0m, in [0;36m<cell line: 2>[0;34m()[0m
-[1;32m      1[0m [38;5;66;03m#read wav files' paths[39;00m
-[0;32m----> 2[0m wav_dirs [38;5;241m=[39m [38;5;28msorted[39m([43mglob[49m([38;5;124m'[39m[38;5;124mdatasets/scripted_spont_dataset/preprocessed_audios_dur3sec/*[39m[38;5;124m'[39m))
-[1;32m      3[0m wav_files [38;5;241m=[39m [38;5;28msorted[39m(glob([38;5;124m'[39m[38;5;124mdatasets/scripted_spont_dataset/preprocessed_audios_dur3sec/*/*.wav[39m[38;5;124m'[39m))
-[1;32m      4[0m [38;5;28mprint[39m([38;5;124mf[39m[38;5;124m'[39m[38;5;132;01m{[39;00m[38;5;28mlen[39m(wav_files)[38;5;132;01m}[39;00m[38;5;124m samples[39m[38;5;124m'[39m)
+[0;31mAssertionError[0m                            Traceback (most recent call last)
+Input [0;32mIn [3][0m, in [0;36m<cell line: 2>[0;34m()[0m
+[1;32m      1[0m [38;5;66;03m#generate speech embeddings[39;00m
+[0;32m----> 2[0m embeddings_dict [38;5;241m=[39m [43mdeciphering_enigma[49m[38;5;241;43m.[39;49m[43mextract_models[49m[43m([49m[43maudio_tensor_list[49m[43m,[49m[43m [49m[43mexp_config[49m[43m)[49m
 
-[0;31mNameError[0m: name 'glob' is not defined
-NameError: name 'glob' is not defined
+File [0;32m~/Desktop/Masters_project/vocal-identity-thesis/_experiments/_datasets_experiments/deciphering_enigma/utils.py:302[0m, in [0;36mextract_models[0;34m(audio_tensor_list, cfg)[0m
+[1;32m    300[0m     embeddings[model_name] [38;5;241m=[39m np[38;5;241m.[39mload(emb_file_name)
+[1;32m    301[0m [38;5;28;01melse[39;00m:
+[0;32m--> 302[0m     model [38;5;241m=[39m [43mload_model[49m[43m([49m[43mmodel_name[49m[43m,[49m[43m [49m[43mweights_file[49m[43m)[49m
+[1;32m    303[0m     embeddings[model_name] [38;5;241m=[39m generate_speech_embeddings(audio_tensor_list, model, model_name, cfg)
+[1;32m    304[0m [38;5;28mprint[39m(embeddings[model_name][38;5;241m.[39mshape)
+
+File [0;32m~/Desktop/Masters_project/vocal-identity-thesis/_experiments/_datasets_experiments/deciphering_enigma/utils.py:233[0m, in [0;36mload_model[0;34m(model_name, weights_file)[0m
+[1;32m    231[0m device [38;5;241m=[39m torch[38;5;241m.[39mdevice([38;5;124m'[39m[38;5;124mcuda[39m[38;5;124m'[39m [38;5;28;01mif[39;00m torch[38;5;241m.[39mcuda[38;5;241m.[39mis_available() [38;5;28;01melse[39;00m [38;5;124m'[39m[38;5;124mcpu[39m[38;5;124m'[39m)
+[1;32m    232[0m [38;5;28;01mif[39;00m [38;5;124m'[39m[38;5;124mBYOL-[39m[38;5;124m'[39m [38;5;129;01min[39;00m model_name:
+[0;32m--> 233[0m     model [38;5;241m=[39m [43mserab_byols[49m[38;5;241;43m.[39;49m[43mload_model[49m[43m([49m[43mweights_file[49m[43m,[49m[43m [49m[43mmodel_name[49m[38;5;241;43m.[39;49m[43msplit[49m[43m([49m[38;5;124;43m'[39;49m[38;5;124;43m_[39;49m[38;5;124;43m'[39;49m[43m)[49m[43m[[49m[38;5;241;43m-[39;49m[38;5;241;43m1[39;49m[43m][49m[43m)[49m[38;5;241m.[39mto(device)
+[1;32m    234[0m [38;5;28;01melif[39;00m model_name [38;5;241m==[39m [38;5;124m'[39m[38;5;124mHuBERT[39m[38;5;124m'[39m:
+[1;32m    235[0m     model [38;5;241m=[39m HubertModel[38;5;241m.[39mfrom_pretrained(weights_file, cache_dir[38;5;241m=[39m[38;5;124m'[39m[38;5;124m/om2/user/gelbanna/huggingface/[39m[38;5;124m'[39m)[38;5;241m.[39mto(device)
+
+File [0;32m~/Desktop/Masters_project/serab-byols/serab_byols/serab.py:85[0m, in [0;36mload_model[0;34m(model_file_path, model_name, cfg_path)[0m
+[1;32m     71[0m [38;5;28;01mdef[39;00m [38;5;21mload_model[39m(model_file_path: [38;5;28mstr[39m [38;5;241m=[39m [38;5;124m"[39m[38;5;124m"[39m, model_name: [38;5;28mstr[39m [38;5;241m=[39m [38;5;124m"[39m[38;5;124mdefault[39m[38;5;124m"[39m, cfg_path: [38;5;28mstr[39m [38;5;241m=[39m [38;5;124m"[39m[38;5;124m./serab-byols/serab_byols/config.yaml[39m[38;5;124m"[39m) [38;5;241m-[39m[38;5;241m>[39m torch[38;5;241m.[39mnn[38;5;241m.[39mModule:
+[1;32m     72[0m     [38;5;124;03m"""Load pre-trained DL models.[39;00m
+[1;32m     73[0m 
+[1;32m     74[0m [38;5;124;03m    Parameters[39;00m
+[0;32m   (...)[0m
+[1;32m     83[0m [38;5;124;03m        Model loaded with pre-training weights[39;00m
+[1;32m     84[0m [38;5;124;03m    """[39;00m
+[0;32m---> 85[0m     [38;5;28;01massert[39;00m model_name [38;5;129;01min[39;00m model_file_path[38;5;241m.[39msplit([38;5;124m'[39m[38;5;124m_[39m[38;5;124m'[39m)[[38;5;241m0[39m], [38;5;124m"[39m[38;5;124mThe checkpoint doesn[39m[38;5;124m'[39m[38;5;124mt match with the selected model name[39m[38;5;124m"[39m
+[1;32m     87[0m     [38;5;66;03m# Load config file[39;00m
+[1;32m     88[0m     cfg [38;5;241m=[39m load_yaml_config(cfg_path)
+
+[0;31mAssertionError[0m: The checkpoint doesn't match with the selected model name
+AssertionError: The checkpoint doesn't match with the selected model name
 
