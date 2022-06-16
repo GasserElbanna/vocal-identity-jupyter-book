@@ -840,7 +840,7 @@ Data2Vec embeddings are already saved for scriptvsspon_speech
 <li><p>Remove the distances above 99% percentile (outliers).</p></li>
 <li><p>Plot violin plot for each model, split by the label to see how are these models encode both labels.</p></li>
 </ol>
-<p><img alt="distance" src="_experiments/_datasets_experiments/distance_orig_dimensions.png" /></p>
+<p><img alt="distance" src="../../_images/distance_orig_dimensions.png" /></p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df_all</span> <span class="o">=</span> <span class="n">deciphering_enigma</span><span class="o">.</span><span class="n">compute_distances</span><span class="p">(</span><span class="n">metadata_df</span><span class="p">,</span> <span class="n">embeddings_dict</span><span class="p">,</span> <span class="n">exp_config</span><span class="o">.</span><span class="n">dataset_name</span><span class="p">,</span> <span class="s1">&#39;cosine&#39;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">metadata_df</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
