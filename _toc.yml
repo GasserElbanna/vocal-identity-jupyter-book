@@ -16,9 +16,11 @@ parts:
   - file: _methods/voice_synthesis
   - file: _methods/nonlinear_mapping
   - file: _methods/representation_similarity_methods
-- caption: Experiments
+- caption: Voice Identity Perception in Models
   chapters:
+  - file: _experiments/models
   - file: _experiments/pipeline
+  - file: _experiments/voxceleb_benchmark
   - file: _experiments/datasets_experiments
     sections:
       - file: _experiments/_datasets_experiments/scriptvsspon_analysis
