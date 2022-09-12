@@ -16,7 +16,7 @@ parts:
   - file: _methods/voice_synthesis
   - file: _methods/nonlinear_mapping
   - file: _methods/representation_similarity_methods
-- caption: Voice Identity Perception in Models
+- caption: Speaker Identity in Models
   chapters:
   - file: _experiments/1_models/models
     title: Models
@@ -25,6 +25,8 @@ parts:
       title: Handcrafted Models
       sections:
       - file: _experiments/1_models/_handcrafted/log-mel-spec
+      - file: _experiments/1_models/_handcrafted/cochleagram
+      - file: _experiments/1_models/_handcrafted/opensmile
     - file: _experiments/1_models/self-supervised_models
       title: Self-supervised Models
   - file: _experiments/2_pipeline/pipeline
