@@ -23,7 +23,7 @@ plt.tight_layout()
 
 # | ![time_freq_signal.png](time_freq_signal.png)|
 # |:--:|
-# | <b>Fig.2 - Signal in Time and Frequency domains (From *[Aavos International](https://aavos.eu/glossary/fourier-transform/)*)</b>|
+# | <b>Fig.1 - Signal in Time and Frequency domains (from *[Aavos International](https://aavos.eu/glossary/fourier-transform/)*)</b>|
 
 # The representation of a signal in the frequency domain is called a *Spectrum* in which we plot the variation in amplitude across the frequency axis instead of time.
 
@@ -44,6 +44,10 @@ plt.tight_layout()
 
 
 # That being said, it is useful to show how the amplitudes of frequencies change across time. Thus, we need to show a 2D representation showing the amplitude variation across freqency and time axes. This presentation called *Spectrogram*. We show the amplitudes in log scale for better visualizetion.
+
+# | ![fourier_transform.png](fourier_transform.png)|
+# |:--:|
+# | <b>Fig.2 - Fourier Transform of Audio Signal (from *[Math Works](https://www.mathworks.com/help/dsp/ref/dsp.stft.html)*)</b>|
 
 # In[39]:
 

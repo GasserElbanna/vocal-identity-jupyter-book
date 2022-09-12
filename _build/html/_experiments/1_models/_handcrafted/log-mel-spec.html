@@ -353,7 +353,7 @@ const thebe_selector_output = ".output, .cell_output"
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td class="text-align:center"><p><b>Fig.2 - Signal in Time and Frequency domains (From <em><a class="reference external" href="https://aavos.eu/glossary/fourier-transform/">Aavos International</a></em>)</b></p></td>
+<tr class="row-even"><td class="text-align:center"><p><b>Fig.1 - Signal in Time and Frequency domains (from <em><a class="reference external" href="https://aavos.eu/glossary/fourier-transform/">Aavos International</a></em>)</b></p></td>
 </tr>
 </tbody>
 </table>
@@ -379,6 +379,16 @@ const thebe_selector_output = ".output, .cell_output"
 </div>
 </div>
 <p>That being said, it is useful to show how the amplitudes of frequencies change across time. Thus, we need to show a 2D representation showing the amplitude variation across freqency and time axes. This presentation called <em>Spectrogram</em>. We show the amplitudes in log scale for better visualizetion.</p>
+<table class="colwidths-auto table">
+<thead>
+<tr class="row-odd"><th class="text-align:center head"><p><img alt="fourier_transform.png" src="../../../_images/fourier_transform.png" /></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-align:center"><p><b>Fig.2 - Fourier Transform of Audio Signal (from <em><a class="reference external" href="https://www.mathworks.com/help/dsp/ref/dsp.stft.html">Math Works</a></em>)</b></p></td>
+</tr>
+</tbody>
+</table>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
@@ -409,7 +419,7 @@ const thebe_selector_output = ".output, .cell_output"
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../../../_images/log-mel-spec_7_0.png" src="../../../_images/log-mel-spec_7_0.png" />
+<img alt="../../../_images/log-mel-spec_8_0.png" src="../../../_images/log-mel-spec_8_0.png" />
 </div>
 </div>
 <p>Additionally, to mimic how humans perceive frequencies, some modifications in the frequency scaling are required. For instance, we don’t perceive frequencies on a linear scale. In fact, in 1937, Stevens, Volkmann, and Newmann introduced the mel scale. A scale that accomodate the distances between frequencies to be similar to how we perveive those distances. Hence, we use the <em>Mel-spectrogram</em>, with ammplitudes in log scale, as an adequate representation of audio signals.</p>
@@ -439,7 +449,7 @@ const thebe_selector_output = ".output, .cell_output"
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../../../_images/log-mel-spec_9_0.png" src="../../../_images/log-mel-spec_9_0.png" />
+<img alt="../../../_images/log-mel-spec_10_0.png" src="../../../_images/log-mel-spec_10_0.png" />
 </div>
 </div>
 <p>In the upcoming experiments, we used <em>Log-Mel-Spectrograms</em> as an example for handcrafted features to analyze speaker identity. Accrodingly, we extracted a 128-band log-mel magnitude coefficients using a sampling rate of 16 kHz with number of FFT samples of 2048 and hop size of 512. All spectrograms were generated within a frequency range of 5 to 20,000 Hz.</p>
