@@ -18,12 +18,12 @@ parts:
   - file: _methods/representation_similarity_methods
 - caption: Voice Identity Perception in Models
   chapters:
-  - file: _experiments/1_models
+  - file: _experiments/1_models/models
     sections:
-        - file: _experiments/1_models/_handcrafted/log-mel-spec.ipynb
-  - file: _experiments/2_pipeline
-  - file: _experiments/3_ASpR_benchmark
-  - file: _experiments/4_datasets_experiments
+        - file: _experiments/1_models/_handcrafted/log-mel-spec
+  - file: _experiments/2_pipeline/pipeline
+  - file: _experiments/3_ASpR_benchmark/voxceleb_benchmark
+  - file: _experiments/4_datasets_experiments/datasets_experiments
     sections:
-      - file: _experiments/_datasets_experiments/scriptvsspon_analysis
-      - file: _experiments/_datasets_experiments/scriptvsspon_analysis_5sec
+      - file: _experiments/4_datasets_experiments/scriptvsspon_analysis
+      - file: _experiments/4_datasets_experiments/scriptvsspon_analysis_5sec
