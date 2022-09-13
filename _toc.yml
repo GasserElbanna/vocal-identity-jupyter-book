@@ -29,6 +29,9 @@ parts:
       - file: _experiments/1_models/_handcrafted/opensmile
     - file: _experiments/1_models/self-supervised_models
       title: Self-supervised Models
+      sections:
+      - file: _experiments/1_models/_data_driven/generative_models
+        title: Generative Models
   - file: _experiments/2_pipeline/pipeline
     title: Pipeline and Analysis
   - file: _experiments/3_ASpR_benchmark/voxceleb_benchmark
