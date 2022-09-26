@@ -35,7 +35,7 @@ parts:
   - file: _experiments/2_pipeline/pipeline
     title: Pipeline and Analysis
   - file: _experiments/3_ASpR_benchmark/voxceleb_benchmark
-    title: VoxCeleb Benchmark
+    title: ASpR Benchmark
   - file: _experiments/4_datasets_experiments/datasets_experiments
     title: Experiments
     sections:
