@@ -4,40 +4,43 @@
 format: jb-book
 root: intro
 parts:
-- caption: Introduction
+#- caption: Introduction
+#- caption: Research Questions
+#- caption: Literature Review
+- caption: Methods
   chapters:
-  - file: _intro/speaker_variability
-  - file: _intro/self_supervised_models
-- caption: Methods and Materials
-  chapters:
-  - file: _methods/dimensionality_reduction
-  - file: _methods/high_dimension_analysis
-  - file: _methods/datasets_experiments
-  - file: _methods/voice_synthesis
-  - file: _methods/nonlinear_mapping
-  - file: _methods/representation_similarity_methods
-- caption: Speaker Identity in Models
-  chapters:
-  - file: _experiments/1_models/models
-    title: Models
+  - file: 4_methods/1_models
+    title: Speech Models
     sections:
-    - file: _experiments/1_models/handcrafted_models
+    - file: 4_methods/1_models/handcrafted_models
       title: Handcrafted Models
       sections:
-      - file: _experiments/1_models/_handcrafted/log-mel-spec
-      - file: _experiments/1_models/_handcrafted/cochleagram
-      - file: _experiments/1_models/_handcrafted/opensmile
-    - file: _experiments/1_models/self-supervised_models
+      - file: 4_methods/1_models/_handcrafted/log-mel-spec
+        title: Log-Mel-Spectrogram
+      - file: 4_methods/1_models/_handcrafted/cochleagram
+        title: Cochleagram
+      - file: 4_methods/1_models/_handcrafted/opensmile
+        title: openSMILE
+    - file: 4_methods/1_models/self-supervised_models
       title: Self-supervised Models
       sections:
-      - file: _experiments/1_models/_data_driven/generative_models
+      - file: 4_methods/1_models/_data_driven/generative_models
         title: Generative Models
-  - file: _experiments/2_pipeline/pipeline
+  - file: 4_methods/2_pipeline/pipeline
     title: Pipeline and Analysis
-  - file: _experiments/3_ASpR_benchmark/voxceleb_benchmark
-    title: ASpR Benchmark
-  - file: _experiments/4_datasets_experiments/datasets_experiments
-    title: Experiments
-    sections:
-    - file: _experiments/4_datasets_experiments/scriptvsspon_analysis
-    - file: _experiments/4_datasets_experiments/scriptvsspon_analysis_5sec
+# - caption: Chapter 1
+#   chapters:
+#   - file: 5_chapter1/datasets_experiments
+#     title: Experiments
+#     sections:
+#     - file: 5_chapter1/scriptvsspon_analysis
+#     - file: 5_chapter1/scriptvsspon_analysis_5sec
+# - caption: Chapter 2
+#   chapters:
+#   - file: 5_chapter1/voxceleb_benchmark
+#     title: VoxCeleb Benchmark
+#   - file: 5_chapter1/timit_benchmark
+#     title: TIMIT Benchmark
+#   - file: 5_chapter1/behavioral_exp_datasets
+#     title: Stimuli Selection
+# - caption: Chapter 3
