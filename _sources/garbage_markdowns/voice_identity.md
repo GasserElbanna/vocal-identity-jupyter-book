@@ -1,0 +1,3 @@
+# Introduction
+
+A voice signal is an essential medium for communication. This signal results from a complex interplay across different physiological and psychological systems (e.g., cognitive, muscular, respiratory, and autonomic systems) [Voice Perception, 2018]. Accordingly, it is a multi-dimensional dynamic signal that conveys the intended spoken message in addition to intrinsic information about the speaker. This information might unravel the speaker's emotional, mental, and physical status along with the speaker's demographic (e.g., gender, age, and geographical background). All the extracted intrinsic features and spoken content collectively engender speaker identity.
