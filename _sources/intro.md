@@ -1,9 +1,14 @@
 # Speaker Identity Perception
+
 ### Written By: *Gasser Elbanna*
 
 In this book, I introduce my MSc. thesis project. I studied speaker identity perception in artificial neural networks (ANNs) and humans. The thesis was carried out in the *[Senseable Intelligence Group](https://sensein.group/)* under the supervision of *[Prof. Satrajit S. Ghosh](https://mcgovern.mit.edu/profile/satrajit-ghosh/)* in the McGovern Institute for Brain Research at MIT. The project is funded by the *[Bertarelli Foundation](https://bertarelli.hms.harvard.edu/people/gasser-elbanna)*.
 
+### Abstract
+
 Efforts to highlight salient acoustic parameters for identity perception were inefficacious. Conversely, we can relatively characterize specific acoustic correlates when studying the perception of other social signals (e.g., gender, demographics, emotions, etc.). For instance, fundamental and formant frequencies are essential parameters for the perception of voice gender. Voice identity processing has two main percepts; discriminating between different voices in similar instances or identifying the same speaker in various instances. We perform these tasks daily, however, between/within-speaker variability plays a vital role in our performance. Also, we have recently witnessed an ample rise in self-supervised models that generate robust speech representations without access to training labels. These representations reflect models' perception that is comparable to humans' perception. Accordingly, we aim to explore both perceptual spaces to understand the mechanisms of identity processing. Thus, the project comprises three folds (Computational, Behavioral, and Neuroimaging); the first fold elucidates the invariances and limitations of handcrafted and self-supervised models in speaker recognition tasks. Then, we conduct behavioral experiments on humans to compare the performance of humans and self-supervised models in voice discrimination tasks and explore their perceptual/encoding spaces. Lastly, the final fold encompasses mapping the speaker embeddings of models to brain activations using fMRI images to examine hierarchical brain-model correspondence.
+
+### Table of Content
 
 ```{tableofcontents}
 ```
