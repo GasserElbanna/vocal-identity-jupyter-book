@@ -9,7 +9,7 @@ parts:
 # - caption: Literature Review
 - caption: Methods
   chapters:
-  - file: 4_methods/1_models
+  - file: 4_methods/1_models/models
     title: Speech Models
     sections:
     - file: 4_methods/1_models/handcrafted_models
@@ -28,14 +28,14 @@ parts:
         title: Generative Models
   - file: 4_methods/2_pipeline/pipeline
     title: Pipeline and Analysis
-- caption: Chapter 1
+- caption: Chapter 1 (Computational)
   chapters:
   - file: 5_chapter1/datasets_experiments
     title: Experiments
     sections:
     - file: 5_chapter1/scriptvsspon_analysis
     - file: 5_chapter1/scriptvsspon_analysis_5sec
-- caption: Chapter 2
+- caption: Chapter 2 (Behavioral)
   chapters:
   - file: 6_chapter2/voxceleb_benchmark
     title: VoxCeleb Benchmark
