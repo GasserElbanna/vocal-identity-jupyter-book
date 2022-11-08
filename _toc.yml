@@ -5,7 +5,9 @@ format: jb-book
 root: intro
 parts:
 # - caption: Introduction
-# - caption: Research Questions
+- caption: Research Questions
+  chapters:
+  - file: 2_research_questions/questions.md
 # - caption: Literature Review
 - caption: Methods
   chapters:
