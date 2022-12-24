@@ -37,7 +37,7 @@
 # 3) **Limitation/Future work:**
 # It might be worth exploring the neurological basis of the suggested perceptual strategies and how could it vary across listners, not just speakers because as per all pervious work, one might hypothesize that telling people apart is speaker-dependent (acoustic space of speakers) while telling people together is more listner-dependent (perceptual space of listners). That being said, it might be crucial to further probe in the listners' perception aspect.
 
-# ### <span style="color:blue"><div style="text-align: justify">Research Questions:</div></span>
+# ### Research Questions:
 # 1) Is there a noticeable within-speaker difference between scripted and spontaneous speech utterances?
 # 2) Would the difference change depending on the type of feature extrator used?
 # 3) Is this difference maintained in lower dimensions?
@@ -56,11 +56,11 @@
 # 6) ST1 (spon): Telling a personal story 1
 # 7) ST2 (spon): Telling a personal story 2
 
-# The dataset was processed by undersampling to 16 kHz to be compatible with BYOL-S models. Additionally, the utterances were cropped to fixed durations (1, 3, 5, 10, 15 sec) to yield 5 new datasets generated from the original one.
+# The dataset was processed by undersampling to 16 kHz to be compatible with all models. Additionally, the utterances were cropped to fixed durations (1, 3, 5, 10, 15 sec) to yield 5 new datasets generated from the original one.
 # 
 # Finally, the naming convention for the audio files is: *{ID}_{Gender}_{Task}_{Label}_{File Number}.wav* (e.g. 049_F_DHR_script_000.wav).
 
-# In the following analysis, we will be using the 3sec-utterance version of the dataset.
+# In the following analysis, we will be using the *3 sec* utterance version of the dataset.
 
 # ## 1) Loading Data
 
@@ -85,14 +85,14 @@ audio_files_orig = deciphering_enigma.build_experiment(exp_config)
 print(f'Dataset has {len(audio_files_orig)} samples')
 
 
-# In[4]:
+# In[3]:
 
 
 if exp_config.preprocess_data:
     dataset_path = deciphering_enigma.preprocess_audio_files(audio_files, speaker_ids=metadata_df['ID'], chunk_dur=exp_config.chunk_dur, resampling_rate=exp_config.resampling_rate, 
                     save_path=f'{exp_config.dataset_name}_{exp_config.model_name}/preprocessed_audios', audio_format=audio_format)
 #balance data to have equal number of labels per speaker
-audio_files = deciphering_enigma.balance_data()
+audio_files = deciphering_enigma.balance_data('/om2/user/gelbanna/datasets/scripted_spont_dataset/preprocessed_audios_dur3sec/*')
 print(f'After Balancing labels: Dataset has {len(audio_files)} samples')
 
 #extract metadata from file name convention
@@ -104,55 +104,29 @@ audio_tensor_list = deciphering_enigma.load_dataset(audio_files, cfg=exp_config,
 
 # ## 2) Generating Embeddings
 
-# We are generating speech embeddings from 9 different models (BYOL-A, BYOL-S/CNN, BYOL-S/CvT, Hybrid BYOL-S/CNN, Hybrid BYOL-S/CvT, Wav2Vec2, HuBERT and Data2Vec).
+# We are generating speech embeddings from 15 different models.
 
-# In[5]:
+# In[4]:
 
 
 #generate speech embeddings
 embeddings_dict = deciphering_enigma.extract_models(audio_tensor_list, exp_config)
 
 
-# ## 3) Original Dimension Analysis
-
-# ### 3.1. Distance-based
-
-# Compute distances (e.g. cosine distance) across embeddings of utterances. Steps to compute it:
-# 
-# 1) Compute distances across all 5816 samples in a pairwise format (5816\*5816).
-# 2) Convert pairwise form to long form i.e. two long columns [Sample1, Sample2, Distance], yielding a dataframe of 5816\*5816 long.
-# 3) Remove rows with zero distances (i.e. distances between a sample and itself).
-# 4) Keep only the distances between samples from the same speaker and the same label (e.g. Dist{speaker1_Label1_audio0 --> speaker1_Label1_audio1}), as shown in figure below.
-# 5) Remove duplicates, i.e. distance between 0 --> 1 == 1 --> 0.
-# 6) Standardize distances within each speaker to account for within speaker variability space.
-# 7) Remove the distances above 99% percentile (outliers).
-# 8) Plot violin plot for each model, split by the label to see how are these models encode both labels.
-
-# ![distance](distance_orig_dimensions.png)
-
-# In[ ]:
+# In[5]:
 
 
-df_all = deciphering_enigma.compute_distances(metadata_df, embeddings_dict, exp_config.dataset_name, 'cosine', list(metadata_df.columns))
+import matplotlib
+from pylab import cm
+import matplotlib as mpl
+matplotlib.font_manager._fmcache
+matplotlib.font_manager._rebuild()
+mpl.rcParams['font.family'] = 'Times New Roman'
+# plt.rcParams['font.size'] = 20
+plt.rcParams['axes.linewidth'] = 3
 
 
-# In[41]:
-
-
-deciphering_enigma.visualize_violin_dist(df_all)
-
-
-# ### <span style="color:red"><div style="text-align: justify">Discussion:</div></span>
-# 
-# The above violin plot illustrates the cosine distance distribution within each speaker for both labels (Scripted and Spontaneous Speech). That being said, one can notice that for most models there is a high effect size between the distributions meaning that the models are able to encode scripted speech utterances closer from each other relative to spontaneous speech utterances. However, some models such as HuBERT and Hybrid BYOL-S/CvT show no or small effect size, respectively. Thus, both models have similar distance distribution for both labels across speakers.
-# 
-# The observed discrepancies could be engendered from the nature of those speaking styles. For instance, in conversational speech, it is expected to have more pauses and non-speech vocalizations which could affect the way the model encode/perceive such utterances.
-# 
-# We still can't tell if the distribution discrepancies are due to a shift in identity processing or maybe these models are not encoding identity, thus the distances wouldn't be an adequate proxy for identity perception.
-# 
-# Consequently, the next step comprises linear encoding which helps to evaluate the predictive power of these models in identifying speakers from scripted vs spontaneous utterances.
-
-# ### 3.2. Linear Encoding:
+# ## 3) Linear Encoding:
 
 # In this section, we evaluate the self-supervised models ability to identify speakers from scripted vs spontaneous speech by leveraging different ML classifiers such as Logistic Regression (LR), Random Forest (RF) and Support Vector Machine (SVM). The work flow of this section, for each model, is as follows:
 # 1) Split the data by labels to have two label-based datasets; one for scripted samples and the other for spontaneous
@@ -162,87 +136,98 @@ deciphering_enigma.visualize_violin_dist(df_all)
 # 5) Consequently, the encoder yields several UAR scores for each classifier, each label and eventually each model. (illustrated in the violin plots below)
 # 6) Lastly, the UAR on the unseen test set is reported in the cell below.
 
-# In[5]:
+# In[8]:
 
 
 ml_encoder = deciphering_enigma.ML_Encoder()
 for i, (model_name, embeddings) in enumerate(embeddings_dict.items()):
-    ml_encoder.run(model_name, embeddings, metadata_df['Label'], metadata_df['ID'], exp_config.dataset_name)
+    ml_encoder.run(model_name, embeddings, metadata_df['Label'], metadata_df['ID'], exp_config.dataset_name, '')
 
 
-# In[17]:
+# In[26]:
 
 
-df = pd.DataFrame({'Model': [], 'Label': [], 'Clf': [], 'Score': []})
-for model_name in embeddings_dict.keys():
-    df_model = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/linear_encoding_scores.csv')
-    df_model = df_model[df_model.Score > np.percentile(df_model.Score,10)]
-    df = pd.concat([df, df_model])
+#read scores from all models across all classifiers as dataframe
+df = pd.read_csv(f'../{exp_config.dataset_name}/linear_encoding_all_scores.csv', index_col=0)
 
 
-# In[18]:
+# In[27]:
 
 
-fig, ax = plt.subplots(3, 1, figsize=(15, 20))
-ax = ax.flatten()
-ax[0].set_title('Logistic Regression (LR)', fontsize=20)
-sns.boxplot(data=df.loc[df.Clf == 'LR'], x='Model', y='Score', hue='Label', ax=ax[0])
-ax[1].set_title('Random Forest (RF)', fontsize=20)
-sns.boxplot(data=df.loc[df.Clf == 'RF'], x='Model', y='Score', hue='Label', ax=ax[1])
-ax[2].set_title('Support Vector Machine (SVM)', fontsize=20)
-sns.boxplot(data=df.loc[df.Clf == 'SVM'], x='Model', y='Score', hue='Label', ax=ax[2])
+palette = {'Read Speech':'sandybrown', 'Spontaneous Speech':'mediumseagreen'}
+
+
+# ### 3.1. Logistic Regression
+
+# In[31]:
+
+
+clf = 'LR'
+fig, ax = plt.subplots(1, 1, figsize=(25, 15))
+graph = sns.barplot(data=df, x='Model', y='Score', hue='Label', ax=ax, palette=palette)
+ax.set_xticklabels(ax.get_xticklabels(), size = 35, rotation=80)
+ax.set_yticklabels(ax.get_yticks(), size = 35)
+ax.set_ylabel('UAR (%)', fontsize=40)
+ax.set_xlabel('Models', fontsize=40)
+#Plot chance level performance
+ax.axhline(y=100/26, c='red')
+ax.legend(bbox_to_anchor=(1, 1), fontsize=40)
 plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/linear_encoding_plots/linear_encoding_{clf}.svg')
+plt.savefig(f'../{exp_config.dataset_name}/linear_encoding_plots/linear_encoding_{clf}.png')
 
 
-# Zoom in for some models by removing the *facebook* models for better visualization
+# ### 3.2. Random Forrest
 
-# In[19]:
-
-
-df = df.loc[(df.Model != 'HuBERT') & (df.Model != 'Wav2Vec2') & (df.Model != 'Data2Vec')]
+# In[32]:
 
 
-# In[20]:
-
-
-fig, ax = plt.subplots(3, 1, figsize=(15, 20))
-ax = ax.flatten()
-ax[0].set_title('Logistic Regression (LR)', fontsize=20)
-ax[0].set_ylim([0.7,1.05])
-sns.boxplot(data=df.loc[df.Clf == 'LR'], x='Model', y='Score', hue='Label', ax=ax[0])
-ax[1].set_title('Random Forest (RF)', fontsize=20)
-ax[1].set_ylim([0.7,1.05])
-sns.boxplot(data=df.loc[df.Clf == 'RF'], x='Model', y='Score', hue='Label', ax=ax[1])
-ax[2].set_title('Support Vector Machine (SVM)', fontsize=20)
-ax[2].set_ylim([0.7,1.05])
-sns.boxplot(data=df.loc[df.Clf == 'SVM'], x='Model', y='Score', hue='Label', ax=ax[2])
+clf = 'RF'
+fig, ax = plt.subplots(1, 1, figsize=(25, 15))
+graph = sns.barplot(data=df, x='Model', y='Score', hue='Label', ax=ax, palette=palette)
+ax.set_xticklabels(ax.get_xticklabels(), size = 35, rotation=80)
+ax.set_yticklabels(ax.get_yticks(), size = 35)
+ax.set_ylabel('UAR (%)', fontsize=40)
+ax.set_xlabel('Models', fontsize=40)
+#Plot chance level performance
+ax.axhline(y=100/26, c='red')
+ax.legend(bbox_to_anchor=(1, 1), fontsize=40)
 plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/linear_encoding_plots/linear_encoding_{clf}.svg')
+plt.savefig(f'../{exp_config.dataset_name}/linear_encoding_plots/linear_encoding_{clf}.png')
 
 
-# ### 3.3. Similarity Representation Analysis:
+# ### 3.3. Support Vector Machine
 
-# Load openSMILE eGeMAPS feature set
-
-# In[5]:
+# In[33]:
 
 
-embeddings_dict = add_os_features(embeddings_dict, exp_config.dataset_name)
+clf = 'SVM'
+fig, ax = plt.subplots(1, 1, figsize=(25, 15))
+graph = sns.barplot(data=df, x='Model', y='Score', hue='Label', ax=ax, palette=palette)
+ax.set_xticklabels(ax.get_xticklabels(), size = 35, rotation=80)
+ax.set_yticklabels(ax.get_yticks(), size = 35)
+ax.set_ylabel('UAR (%)', fontsize=40)
+ax.set_xlabel('Models', fontsize=40)
+#Plot chance level performance
+ax.axhline(y=100/26, c='red')
+ax.legend(bbox_to_anchor=(1, 1), fontsize=40)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/linear_encoding_plots/linear_encoding_{clf}.svg')
+plt.savefig(f'../{exp_config.dataset_name}/linear_encoding_plots/linear_encoding_{clf}.png')
 
 
-# In[6]:
+# ## 4) Similarity Representation Analysis:
+
+# In[34]:
 
 
 cka_class = deciphering_enigma.CKA(unbiased=True, kernel='rbf', rbf_threshold=0.5)
-cka_ = run_cka(cka_class, embeddings_dict)
+cka_ = cka_class.run_cka(embeddings_dict, compute_from='features', save_path=f'../{exp_config.dataset_name}/', save_array=True)
+cka_class.plot_heatmap(cka_, embeddings_dict.keys(), save_path=f'../{exp_config.dataset_name}/', save_fig=True)
 
 
-# In[7]:
-
-
-cka_class.plot_heatmap(cka_, embeddings_dict.keys(), save_path=f'{exp_config.dataset_name}', save_fig=True)
-
-
-# ## 4) Dimensionality Reduction
+# ## 5) Dimensionality Reduction
 
 # The previous analysis showed how well the model is capable of grouping the uttereances of the same speaker in different cases (scripted and spontaneous) in the embedding space (high dimension). That being said, we will replicate the same analysis but in the lower dimension space to visualize the impact of speaking styles on voice identity perception.
 
@@ -256,8 +241,6 @@ cka_class.plot_heatmap(cka_, embeddings_dict.keys(), save_path=f'{exp_config.dat
 
 # Consequently, we present the results from dimensionality reduction methods in two ways, one optimimizing local structure metric (KNN) and the other optimizing global structure metric (CPD).
 
-# ### <a id='another_cell'></a> 4.1 Mapping Labels
-
 # In[6]:
 
 
@@ -267,179 +250,1196 @@ for i, model_name in enumerate(embeddings_dict.keys()):
     tuner.tune_reducer(embeddings_dict[model_name], metadata=metadata_df, dataset_name=exp_config.dataset_name, model_name=model_name)
 
 
-# #### 4.1.1. Mapping Gender
+# ### <a id='another_cell'></a> 5.1 Mapping Labels
 
-# In[10]:
+# In[7]:
 
 
-fig, ax = plt.subplots(9, 4, figsize=(40, 90))
+handcrafted_features = ['Log-Mel-Spectrogram', 'Cochleagram']
+byol_models = ['BYOL-A_default', 'BYOL-S_default', 'BYOL-I_default']
+cvt_models = ['BYOL-S_cvt', 'Hybrid_BYOL-S_cvt']
+generative_models = ['TERA', 'APC']
+wav2vec2_models = ['Wav2Vec2_latent', 'Wav2Vec2']
+hubert_models = ['HuBERT_latent', 'HuBERT']
+data2vec_models = ['Data2Vec_latent', 'Data2Vec']
+
+
+# #### 5.1.1. Mapping Gender
+
+# In[61]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
 optimize = 'Global'
+label = 'Gender'
 reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
-for i, model_name in enumerate(embeddings_dict.keys()):
+for i, model_name in enumerate(handcrafted_features):
     df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
     df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
                        'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
     for j, name in enumerate(reducer_names):
-        ax[0,j].set_title(f'{name}', fontsize=25)
-        visualize_embeddings(df, 'Gender', metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='sns')
-    ax[i, 0].set_ylabel(model_name, fontsize=25)
-ax[0,j].legend(bbox_to_anchor=(1, 1.15), fontsize=20)
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
 plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.svg')
 
 
-# #### 4.1.2. Mapping Identity
-
-# In[11]:
+# In[62]:
 
 
-fig, ax = plt.subplots(9, 4, figsize=(40, 90))
+fig, ax = plt.subplots(3, 4, figsize=(20, 15))
 optimize = 'Global'
+label = 'Gender'
 reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
-for i, model_name in enumerate(embeddings_dict.keys()):
+for i, model_name in enumerate(byol_models):
     df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
     df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
                        'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
     for j, name in enumerate(reducer_names):
-        ax[0,j].set_title(f'{name}', fontsize=25)
-        visualize_embeddings(df, 'ID', metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='sns')
-    ax[i, 0].set_ylabel(model_name, fontsize=25)
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
 plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.svg')
 
 
-# #### 4.1.3. Mapping Speaking Style (Script/Spon)
-
-# In[9]:
+# In[63]:
 
 
-fig, ax = plt.subplots(9, 4, figsize=(40, 90))
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
 optimize = 'Global'
+label = 'Gender'
 reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
-for i, model_name in enumerate(embeddings_dict.keys()):
+for i, model_name in enumerate(cvt_models):
     df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
     df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
                        'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
     for j, name in enumerate(reducer_names):
-        ax[0,j].set_title(f'{name}', fontsize=25)
-        visualize_embeddings(df, 'Label', metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='sns')
-    ax[i, 0].set_ylabel(model_name, fontsize=25)
-ax[0,j].legend(bbox_to_anchor=(1, 1.15), fontsize=20)
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
 plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.svg')
 
 
-# ### 4.2 Mapping Acoustic Features
+# In[64]:
 
-# #### 4.2.1. Fundamental Frequency
 
-# In[11]:
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'Gender'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(generative_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.svg')
+
+
+# In[50]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'Gender'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(wav2vec2_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Wav2Vec2':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.svg')
+
+
+# In[51]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'Gender'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(hubert_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'HuBERT':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.svg')
+
+
+# In[52]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'Gender'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(data2vec_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Data2Vec':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.svg')
+
+
+# #### 5.1.2. Mapping Identity
+
+# In[68]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'ID'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(handcrafted_features):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.svg')
+
+
+# In[69]:
+
+
+fig, ax = plt.subplots(3, 4, figsize=(20, 15))
+optimize = 'Global'
+label = 'ID'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(byol_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.svg')
+
+
+# In[70]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'ID'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(cvt_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.svg')
+
+
+# In[71]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'ID'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(generative_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.svg')
+
+
+# In[53]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'ID'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(wav2vec2_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Wav2Vec2':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.svg')
+
+
+# In[ ]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'ID'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(hubert_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'HuBERT':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.svg')
+
+
+# In[56]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'ID'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(data2vec_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Data2Vec':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.svg')
+
+
+# #### 4.1.3. Mapping Speaking Style (Read/Spontaneous)
+
+# In[91]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'Label'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(handcrafted_features):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df['Label'] = df['Label'].str.replace('spon', 'Spontaneous')
+    df['Label'] = df['Label'].str.replace('script', 'Read')
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.svg')
+
+
+# In[92]:
+
+
+fig, ax = plt.subplots(3, 4, figsize=(20, 15))
+optimize = 'Global'
+label = 'Label'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(byol_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df['Label'] = df['Label'].str.replace('spon', 'Spontaneous')
+    df['Label'] = df['Label'].str.replace('script', 'Read')
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.svg')
+
+
+# In[93]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'Label'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(cvt_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df['Label'] = df['Label'].str.replace('spon', 'Spontaneous')
+    df['Label'] = df['Label'].str.replace('script', 'Read')
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.svg')
+
+
+# In[98]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'Label'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(generative_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df['Label'] = df['Label'].str.replace('spon', 'Spontaneous')
+    df['Label'] = df['Label'].str.replace('script', 'Read')
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.svg')
+
+
+# In[57]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'Label'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(wav2vec2_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df['Label'] = df['Label'].str.replace('spon', 'Spontaneous')
+    df['Label'] = df['Label'].str.replace('script', 'Read')
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Wav2Vec2':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.svg')
+
+
+# In[58]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'Label'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(hubert_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df['Label'] = df['Label'].str.replace('spon', 'Spontaneous')
+    df['Label'] = df['Label'].str.replace('script', 'Read')
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'HuBERT':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.svg')
+
+
+# In[59]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'Label'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(data2vec_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df['Label'] = df['Label'].str.replace('spon', 'Spontaneous')
+    df['Label'] = df['Label'].str.replace('script', 'Read')
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Data2Vec':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+ax[0,j].legend(bbox_to_anchor=(1, 1), fontsize=30)
+plt.tight_layout()
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.svg')
+
+
+# ### 5.2 Mapping Acoustic Features
+
+# #### 5.2.1. Fundamental Frequency
+
+# In[39]:
 
 
 f0s = deciphering_enigma.compute_acoustic_features(audio_files, save_path=f'../{exp_config.dataset_name}', feature='f0')
 
 
-# In[14]:
+# In[12]:
 
 
-fig, ax = plt.subplots(9, 4, figsize=(40, 90))
+f0s = np.load(f'../{exp_config.dataset_name}/f0.npy')
+
+
+# In[13]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
 optimize = 'Global'
+label = 'f0'
 reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
-for i, model_name in enumerate(embeddings_dict.keys()):
+for i, model_name in enumerate(handcrafted_features):
     df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
     df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
                        'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
-    df['f0'] = f0s
-    df['f0'] = df['f0'].apply(lambda x: 250 if x > 250 else x)
+    df[label] = np.log(f0s)
     for j, name in enumerate(reducer_names):
-        ax[0,j].set_title(f'{name}', fontsize=25)
-        points = deciphering_enigma.visualize_embeddings(df, 'f0', metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='colorbar')
-    ax[i, 0].set_ylabel(model_name, fontsize=25)
-cbar = fig.colorbar(points, ax=ax, aspect=60)
-cbar.ax.set_ylabel('Median F0', rotation=270, fontsize=20)
-plt.show()
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median F0', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.svg')
+
+
+# In[14]:
+
+
+fig, ax = plt.subplots(3, 4, figsize=(20, 15))
+optimize = 'Global'
+label = 'f0'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(byol_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = np.log(f0s)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median F0', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.svg')
+
+
+# In[15]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'f0'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(cvt_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = np.log(f0s)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median F0', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.svg')
+
+
+# In[16]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'f0'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(generative_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = np.log(f0s)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median F0', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.svg')
+
+
+# In[61]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'f0'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(wav2vec2_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = np.log(f0s)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Wav2Vec2':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median F0', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.svg')
+
+
+# In[62]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'f0'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(hubert_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = np.log(f0s)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'HuBERT':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median F0', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.svg')
+
+
+# In[63]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'f0'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(data2vec_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = np.log(f0s)
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Data2Vec':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median F0', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.svg')
 
 
 # #### 4.2.2. RMS
 
-# In[15]:
+# In[49]:
 
 
 rms = deciphering_enigma.compute_acoustic_features(audio_files, save_path=f'../{exp_config.dataset_name}', feature='rms')
 
 
-# In[17]:
+# In[20]:
 
 
-fig, ax = plt.subplots(9, 4, figsize=(40, 90))
-optimize = 'Global'
-reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
-for i, model_name in enumerate(embeddings_dict.keys()):
-    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
-    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
-                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
-    df['rms'] = rms
-    df['rms'] = df['rms'].apply(lambda x: 0.05 if x > 0.05 else x)
-    for j, name in enumerate(reducer_names):
-        ax[0,j].set_title(f'{name}', fontsize=25)
-        points = deciphering_enigma.visualize_embeddings(df, 'rms', metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='colorbar')
-    ax[i, 0].set_ylabel(model_name, fontsize=25)
-cbar = fig.colorbar(points, ax=ax, aspect=60)
-cbar.ax.set_ylabel('Median RMS', rotation=270, fontsize=20)
-plt.show()
+rms = np.load(f'../{exp_config.dataset_name}/rms.npy')
+rms = np.log(rms)
 
-
-# #### 4.2.3. First MFCC
-
-# In[18]:
-
-
-mfcc_start = deciphering_enigma.compute_acoustic_features(audio_files, save_path=f'../{exp_config.dataset_name}', feature='mfcc', mfcc_num=1)
-
-
-# In[23]:
-
-
-fig, ax = plt.subplots(9, 4, figsize=(40, 90))
-optimize = 'Global'
-reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
-for i, model_name in enumerate(embeddings_dict.keys()):
-    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
-    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
-                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
-    df['mfcc'] = mfcc_start
-    # df['rms'] = df['rms'].apply(lambda x: 0.05 if x > 0.05 else x)
-    for j, name in enumerate(reducer_names):
-        ax[0,j].set_title(f'{name}', fontsize=25)
-        points = deciphering_enigma.visualize_embeddings(df, 'mfcc', metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='colorbar')
-    ax[i, 0].set_ylabel(model_name, fontsize=25)
-cbar = fig.colorbar(points, ax=ax, aspect=60)
-cbar.ax.set_ylabel('First MFCC', rotation=270, fontsize=20)
-plt.show()
-
-
-# #### 4.2.4. Number of Syllables
 
 # In[21]:
 
 
-num_syl = deciphering_enigma.compute_acoustic_features(audio_files, save_path=f'../{exp_config.dataset_name}', feature='num_syl')
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'rms'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(handcrafted_features):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = rms
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median RMS', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.svg')
 
 
 # In[22]:
 
 
-fig, ax = plt.subplots(9, 4, figsize=(40, 90))
+fig, ax = plt.subplots(3, 4, figsize=(20, 15))
 optimize = 'Global'
+label = 'rms'
 reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
-for i, model_name in enumerate(embeddings_dict.keys()):
+for i, model_name in enumerate(byol_models):
     df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
     df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
                        'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
-    df['num_syl'] = num_syl
-    # df['rms'] = df['rms'].apply(lambda x: 0.05 if x > 0.05 else x)
+    df[label] = rms
     for j, name in enumerate(reducer_names):
-        ax[0,j].set_title(f'{name}', fontsize=25)
-        points = deciphering_enigma.visualize_embeddings(df, 'num_syl', metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name, plot_type='colorbar')
-    ax[i, 0].set_ylabel(model_name, fontsize=25)
-cbar = fig.colorbar(points, ax=ax, aspect=60)
-cbar.ax.set_ylabel('Number of Syllabels', rotation=270, fontsize=20)
-plt.show()
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median RMS', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.svg')
+
+
+# In[23]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'rms'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(cvt_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = rms
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median RMS', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.svg')
+
+
+# In[24]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'rms'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(generative_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = rms
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median RMS', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.svg')
+
+
+# In[64]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'rms'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(wav2vec2_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = rms
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Wav2Vec2':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median RMS', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.svg')
+
+
+# In[65]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'rms'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(hubert_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = rms
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'HuBERT':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median RMS', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.svg')
+
+
+# In[66]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'rms'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(data2vec_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = rms
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Data2Vec':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('Log Median RMS', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.svg')
+
+
+# #### 4.2.3. First MFCC
+
+# In[71]:
+
+
+mfcc_start = deciphering_enigma.compute_acoustic_features(audio_files, save_path=f'../{exp_config.dataset_name}', feature='mfcc', mfcc_num=1)
+
+
+# In[28]:
+
+
+mfcc_start = np.load(f'../{exp_config.dataset_name}/mfcc.npy')
+
+
+# In[29]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'mfcc_start'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(handcrafted_features):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = mfcc_start
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('First MFCC', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.svg')
+
+
+# In[31]:
+
+
+fig, ax = plt.subplots(3, 4, figsize=(20, 15))
+optimize = 'Global'
+label = 'mfcc_start'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(byol_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = mfcc_start
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('First MFCC', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.svg')
+
+
+# In[32]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'mfcc_start'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(cvt_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = mfcc_start
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('First MFCC', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.svg')
+
+
+# In[33]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'mfcc_start'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(generative_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = mfcc_start
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('First MFCC', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.svg')
+
+
+# In[67]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'mfcc_start'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(wav2vec2_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = mfcc_start
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Wav2Vec2':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('First MFCC', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.svg')
+
+
+# In[68]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'mfcc_start'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(hubert_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = mfcc_start
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'HuBERT':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('First MFCC', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.svg')
+
+
+# In[69]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'mfcc_start'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(data2vec_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = mfcc_start
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Data2Vec':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('First MFCC', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.svg')
+
+
+# #### 4.2.4. Number of Syllables
+
+# In[72]:
+
+
+num_syl = deciphering_enigma.compute_acoustic_features(audio_files, save_path=f'../{exp_config.dataset_name}', feature='num_syl')
+
+
+# In[37]:
+
+
+num_syl = np.load(f'../{exp_config.dataset_name}/num_syl.npy')
+
+
+# In[38]:
+
+
+fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+sns.histplot(x=num_syl, kde=True, ax=ax, bins=15)
+ax.set_xlabel('# of Syllables')
+plt.savefig(f'../{exp_config.dataset_name}/num_syl.png')
+
+
+# In[40]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'num_syl'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(handcrafted_features):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = num_syl
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('# of Syllables', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/handcrafted_{label}_dimred.svg')
+
+
+# In[42]:
+
+
+fig, ax = plt.subplots(3, 4, figsize=(20, 15))
+optimize = 'Global'
+label = 'num_syl'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(byol_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = num_syl
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('# of Syllables', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/byol_{label}_dimred.svg')
+
+
+# In[43]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'num_syl'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(cvt_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = num_syl
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('# of Syllables', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/cvt_{label}_dimred.svg')
+
+
+# In[44]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'num_syl'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(generative_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = num_syl
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('# of Syllables', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.svg')
+
+
+# In[70]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'num_syl'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(wav2vec2_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = num_syl
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Wav2Vec2':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('# of Syllables', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.svg')
+
+
+# In[71]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'num_syl'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(hubert_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = num_syl
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'HuBERT':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('# of Syllables', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.svg')
+
+
+# In[72]:
+
+
+fig, ax = plt.subplots(2, 4, figsize=(20, 10))
+optimize = 'Global'
+label = 'num_syl'
+reducer_names = ['PCA', 'tSNE', 'UMAP', 'PaCMAP']
+for i, model_name in enumerate(data2vec_models):
+    df = pd.read_csv(f'../{exp_config.dataset_name}/{model_name}/dim_reduction.csv', header=[0,1,2])
+    df.rename(columns={'Unnamed: 17_level_1': '', 'Unnamed: 17_level_2': '', 'Unnamed: 18_level_1': '', 'Unnamed: 18_level_2': '', 'Unnamed: 19_level_1': '', 'Unnamed: 19_level_2': '', 'Unnamed: 20_level_1': '', 'Unnamed: 20_level_2': '',
+                       'Unnamed: 21_level_1': '', 'Unnamed: 21_level_2': '',},inplace=True)
+    df[label] = num_syl
+    for j, name in enumerate(reducer_names):
+        ax[0,j].set_title(f'{name}', fontsize=30)
+        points = deciphering_enigma.visualize_embeddings(df, label, metrics=[], axis=ax[i, j], opt_structure=optimize, red_name=name)
+    if model_name == 'Data2Vec':
+        model_name += '_final'
+    ax[i, 0].set_ylabel(model_name, fontsize=30)
+cbar = fig.colorbar(points, ax=ax, pad=0.02)
+cbar.set_label('# of Syllables', rotation=270, labelpad=25, fontsize=30)
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.png')
+plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred.svg')
 

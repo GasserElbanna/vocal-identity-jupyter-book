@@ -36,7 +36,6 @@ parts:
     title: Experiments
     sections:
     - file: 5_chapter1/scriptvsspon_analysis
-    - file: 5_chapter1/scriptvsspon_analysis_5sec
 - caption: Chapter 2 (Behavioral)
   chapters:
   - file: 6_chapter2/voxceleb_benchmark
