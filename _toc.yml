@@ -33,6 +33,12 @@ parts:
 - caption: Chapter 1 (Computational)
   chapters:
   - file: 5_chapter1/datasets_experiments
+    title: Benchmarks
+    sections:
+    - file: 5_chapter1/voxceleb_benchmark
+      title: VoxCeleb Benchmark
+    - file: 5_chapter1/timit_benchmark
+      title: TIMIT Benchmark
     title: Experiments
     sections:
     - file: 5_chapter1/reverse_speech_analysis
@@ -41,10 +47,6 @@ parts:
     - file: 5_chapter1/bilingual_speech_analysis
 - caption: Chapter 2 (Behavioral)
   chapters:
-  - file: 6_chapter2/voxceleb_benchmark
-    title: VoxCeleb Benchmark
-  - file: 6_chapter2/timit_benchmark
-    title: TIMIT Benchmark
   - file: 6_chapter2/behavioral_exp_datasets
     title: Stimuli Selection
 # - caption: Chapter 3
