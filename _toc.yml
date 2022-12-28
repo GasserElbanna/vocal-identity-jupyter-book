@@ -42,9 +42,11 @@ parts:
     title: Experiments
     sections:
     - file: 5_chapter1/reverse_speech_analysis
-    - file: 5_chapter1/pitch_sweeping_analysis
     - file: 5_chapter1/scriptvsspon_analysis
     - file: 5_chapter1/bilingual_speech_analysis
+    - file: 5_chapter1/pitch_sweeping_analysis
+    - file: 5_chapter1/pitchshifting_analysis
+    - file: 5_chapter1/clearvsbabbling_bkg_analysis
 - caption: Chapter 2 (Behavioral)
   chapters:
   - file: 6_chapter2/behavioral_exp_datasets
