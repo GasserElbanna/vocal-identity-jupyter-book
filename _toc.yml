@@ -56,7 +56,7 @@ parts:
   - file: 7_chapter3/fmriprep
     title: fMRIPrep
     sections:
-    - file: 7_chapter3/fmriprep_results/sub-01.html
+    - file: 7_chapter3/fmriprep_results/sub-01
     - file: 7_chapter3/fmriprep_results/sub-02.html
     - file: 7_chapter3/fmriprep_results/sub-03.html
     - file: 7_chapter3/fmriprep_results/sub-04.html
