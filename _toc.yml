@@ -44,7 +44,7 @@ parts:
     - file: 5_chapter1/scriptvsspon_analysis
     - file: 5_chapter1/bilingual_speech_analysis
     - file: 5_chapter1/pitch_sweeping_analysis
-    - file: 5_chapter1/pitchshifting_analysis
+    - file: 5_chapter1/pitchshift_analysis
     - file: 5_chapter1/emotion_speech_analysis
     - file: 5_chapter1/clearvsbabbling_bkg_analysis
 - caption: Chapter 2 (Behavioral)
