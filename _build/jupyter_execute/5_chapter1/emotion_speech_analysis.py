@@ -16,7 +16,7 @@
 
 # ## 1) Loading Data
 
-# In[2]:
+# In[37]:
 
 
 import numpy as np
@@ -37,7 +37,7 @@ audio_files = deciphering_enigma.build_experiment(exp_config)
 print(f'Dataset has {len(audio_files)} samples')
 
 
-# In[3]:
+# In[38]:
 
 
 #extract metadata from file name convention
@@ -404,7 +404,7 @@ for i, model_name in enumerate(embeddings_dict.keys()):
 
 # ### <a id='another_cell'></a> 5.1 Mapping Labels
 
-# In[6]:
+# In[39]:
 
 
 handcrafted_features = ['Log-Mel-Spectrogram', 'Cochleagram']
@@ -1034,7 +1034,7 @@ plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/data2vec_{label}_dimred
 
 # ### 5.2 Mapping Acoustic Features
 
-# In[10]:
+# In[40]:
 
 
 def visualize_embeddings(df, label_name, metrics=[], axis=[], acoustic_param={}, opt_structure='Local', red_name='PCA'):
@@ -1591,7 +1591,7 @@ ax.set_xlabel('# of Syllables')
 plt.savefig(f'../{exp_config.dataset_name}/num_syl.png')
 
 
-# In[40]:
+# In[41]:
 
 
 fig, ax = plt.subplots(2, 4, figsize=(20, 10))
@@ -1679,7 +1679,7 @@ plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimr
 plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/generative_{label}_dimred.svg')
 
 
-# In[70]:
+# In[45]:
 
 
 fig, ax = plt.subplots(2, 4, figsize=(20, 10))
@@ -1703,7 +1703,7 @@ plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred
 plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/wav2vec2_{label}_dimred.svg')
 
 
-# In[71]:
+# In[46]:
 
 
 fig, ax = plt.subplots(2, 4, figsize=(20, 10))
@@ -1727,7 +1727,7 @@ plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.p
 plt.savefig(f'../{exp_config.dataset_name}/dim_red_plots/hubert_{label}_dimred.svg')
 
 
-# In[72]:
+# In[47]:
 
 
 fig, ax = plt.subplots(2, 4, figsize=(20, 10))
