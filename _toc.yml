@@ -55,24 +55,3 @@ parts:
   chapters:
   - file: 7_chapter3/fmriprep
     title: fMRIPrep
-    sections:
-    - file: 7_chapter3/fmriprep_results/sub-01
-    - file: 7_chapter3/fmriprep_results/sub-02.html
-    - file: 7_chapter3/fmriprep_results/sub-03.html
-    - file: 7_chapter3/fmriprep_results/sub-04.html
-    - file: 7_chapter3/fmriprep_results/sub-05.html
-    # - file: 7_chapter3/fmriprep_results/sub-06.html
-    # - file: 7_chapter3/fmriprep_results/sub-07.html
-    # - file: 7_chapter3/fmriprep_results/sub-08.html
-    # - file: 7_chapter3/fmriprep_results/sub-09.html
-    # - file: 7_chapter3/fmriprep_results/sub-10.html
-    # - file: 7_chapter3/fmriprep_results/sub-11.html
-    # - file: 7_chapter3/fmriprep_results/sub-12.html
-    # - file: 7_chapter3/fmriprep_results/sub-13.html
-    # - file: 7_chapter3/fmriprep_results/sub-14.html
-    # - file: 7_chapter3/fmriprep_results/sub-15.html
-    # - file: 7_chapter3/fmriprep_results/sub-16.html
-    # - file: 7_chapter3/fmriprep_results/sub-17.html
-    # - file: 7_chapter3/fmriprep_results/sub-18.html
-    # - file: 7_chapter3/fmriprep_results/sub-19.html
-    # - file: 7_chapter3/fmriprep_results/sub-20.html
